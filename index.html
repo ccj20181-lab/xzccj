@@ -651,8 +651,8 @@ create policy "Allow anon access" on public.articles for all using (true) with c
 
                 // 创建分类组
                 const group = document.createElement('div');
-                // 有文章且是第一个分类，或者包含当前文章时展开；空分类默认收起
-                const shouldExpand = catArticles.length > 0 && (index === 0 || catArticles.some(a => a.id === currentArticleId));
+                // 只有包含当前编辑文章的分类才展开，其他默认收起
+                const shouldExpand = catArticles.some(a => a.id === currentArticleId);
                 group.className = `category-group ${shouldExpand ? 'expanded' : ''}`;
 
                 // 分类头部
