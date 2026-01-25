@@ -114,7 +114,10 @@
         <!-- 分类筛选按钮 -->
         <div class="px-5 pb-2 flex gap-2 overflow-x-auto no-scrollbar mb-2">
             <button onclick="setFilter('全部')" id="filter-all" class="filter-btn active px-3 py-1 bg-emerald-600 text-white text-xs rounded-full shadow-sm flex-shrink-0 font-medium transition-colors border border-transparent">全部</button>
-            <button onclick="setFilter('小红书')" id="filter-redbook" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">小红书</button>
+            <button onclick="setFilter('财经热点')" id="filter-finance" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 text-xs rounded-full transition-colors flex-shrink-0">🔥 财经热点</button>
+            <button onclick="setFilter('金融知识')" id="filter-knowledge" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-yellow-200 hover:text-yellow-600 text-xs rounded-full transition-colors flex-shrink-0">💡 金融知识</button>
+            <button onclick="setFilter('小红书')" id="filter-redbook" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-pink-200 hover:text-pink-600 text-xs rounded-full transition-colors flex-shrink-0">小红书</button>
+            <button onclick="setFilter('技术笔记')" id="filter-tech" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-blue-200 hover:text-blue-600 text-xs rounded-full transition-colors flex-shrink-0">💻 技术笔记</button>
             <button onclick="setFilter('工作')" id="filter-work" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">工作</button>
             <button onclick="setFilter('生活')" id="filter-life" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">生活</button>
         </div>
@@ -208,17 +211,23 @@
                     </button>
                     <!-- 下拉菜单：默认加 hidden -->
                     <div id="categoryMenu" class="dropdown-menu hidden absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 p-1.5 flex flex-col gap-0.5 z-50">
-                        <button onclick="selectCategory('生活', 'fa-leaf')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-200"><i class="fa-solid fa-leaf text-[10px]"></i></div> 生活文章
+                        <button onclick="selectCategory('财经热点', 'fa-fire')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-red-50 flex items-center justify-center text-red-500 group-hover:bg-red-200"><i class="fa-solid fa-fire text-[10px]"></i></div> 🔥 财经热点
+                        </button>
+                        <button onclick="selectCategory('金融知识', 'fa-lightbulb')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-500 group-hover:bg-yellow-200"><i class="fa-solid fa-lightbulb text-[10px]"></i></div> 💡 金融知识
+                        </button>
+                        <button onclick="selectCategory('小红书', 'fa-book')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-pink-50 hover:text-pink-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-pink-50 flex items-center justify-center text-pink-500 group-hover:bg-pink-200"><i class="fa-solid fa-book text-[10px]"></i></div> 小红书
+                        </button>
+                        <button onclick="selectCategory('技术笔记', 'fa-code')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-blue-200"><i class="fa-solid fa-code text-[10px]"></i></div> 💻 技术笔记
                         </button>
                         <button onclick="selectCategory('工作', 'fa-briefcase')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-blue-200"><i class="fa-solid fa-briefcase text-[10px]"></i></div> 工作笔记
+                            <div class="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-200"><i class="fa-solid fa-briefcase text-[10px]"></i></div> 工作笔记
                         </button>
-                        <button onclick="selectCategory('小红书', 'fa-fire')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-red-50 flex items-center justify-center text-red-500 group-hover:bg-red-200"><i class="fa-solid fa-fire text-[10px]"></i></div> 小红书文案
-                        </button>
-                        <button onclick="selectCategory('灵感', 'fa-lightbulb')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-500 group-hover:bg-yellow-200"><i class="fa-solid fa-lightbulb text-[10px]"></i></div> 灵感记录
+                        <button onclick="selectCategory('生活', 'fa-leaf')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-green-50 hover:text-green-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center text-green-600 group-hover:bg-green-200"><i class="fa-solid fa-leaf text-[10px]"></i></div> 生活文章
                         </button>
                     </div>
                     <input type="hidden" id="categoryInput" value="生活">
@@ -493,12 +502,21 @@ create policy "Allow anon access" on public.articles for all using (true) with c
                 btn.classList.remove('active', 'bg-emerald-600', 'text-white', 'border-transparent');
                 btn.classList.add('bg-white', 'border-gray-200', 'text-gray-500');
             });
-            const btnId = category === '全部' ? 'filter-all' :
-                          category === '小红书' ? 'filter-redbook' :
-                          category === '工作' ? 'filter-work' : 'filter-life';
+            const btnIdMap = {
+                '全部': 'filter-all',
+                '财经热点': 'filter-finance',
+                '金融知识': 'filter-knowledge',
+                '小红书': 'filter-redbook',
+                '技术笔记': 'filter-tech',
+                '工作': 'filter-work',
+                '生活': 'filter-life'
+            };
+            const btnId = btnIdMap[category] || 'filter-all';
             const activeBtn = document.getElementById(btnId);
-            activeBtn.classList.remove('bg-white', 'border-gray-200', 'text-gray-500');
-            activeBtn.classList.add('active', 'bg-emerald-600', 'text-white', 'border-transparent');
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-white', 'border-gray-200', 'text-gray-500');
+                activeBtn.classList.add('active', 'bg-emerald-600', 'text-white', 'border-transparent');
+            }
             renderArticleList();
         }
 
@@ -696,9 +714,9 @@ create policy "Allow anon access" on public.articles for all using (true) with c
         }
 
         function selectCategory(cat, icon, save=true) {
-            const labelMap = {'生活':'生活文章', '工作':'工作笔记', '小红书':'小红书文案', '灵感':'灵感记录'};
-            const iconMap = {'生活':'fa-leaf', '工作':'fa-briefcase', '小红书':'fa-fire', '灵感':'fa-lightbulb'};
-            const colorMap = {'生活':'bg-emerald-100 text-emerald-600', '工作':'bg-blue-100 text-blue-500', '小红书':'bg-red-100 text-red-500', '灵感':'bg-yellow-100 text-yellow-600'};
+            const labelMap = {'财经热点':'🔥 财经热点', '金融知识':'💡 金融知识', '小红书':'小红书', '技术笔记':'💻 技术笔记', '工作':'工作笔记', '生活':'生活文章'};
+            const iconMap = {'财经热点':'fa-fire', '金融知识':'fa-lightbulb', '小红书':'fa-book', '技术笔记':'fa-code', '工作':'fa-briefcase', '生活':'fa-leaf'};
+            const colorMap = {'财经热点':'bg-red-100 text-red-500', '金融知识':'bg-yellow-100 text-yellow-500', '小红书':'bg-pink-100 text-pink-500', '技术笔记':'bg-blue-100 text-blue-500', '工作':'bg-emerald-100 text-emerald-500', '生活':'bg-green-100 text-green-600'};
             document.getElementById('currentCategory').innerText = labelMap[cat] || cat;
             document.getElementById('categoryIcon').className = `fa-solid ${iconMap[cat]||'fa-leaf'} text-xs`;
             document.getElementById('categoryIconBg').className = `w-6 h-6 rounded-full flex items-center justify-center ${colorMap[cat]||'bg-emerald-100'}`;
