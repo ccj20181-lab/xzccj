@@ -34,8 +34,23 @@
         .article-item.active { background-color: rgba(16, 185, 129, 0.08); }
         .article-item.active .title-text { color: #047857; }
 
-        /* 分类按钮激活状态 */
-        .filter-btn.active { background-color: #059669; color: white; border-color: #059669; }
+        /* 分类折叠样式 */
+        .category-group { border-bottom: 1px solid #f3f4f6; }
+        .category-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            user-select: none;
+        }
+        .category-header:hover { background: rgba(0,0,0,0.02); }
+        .category-header.active { background: rgba(16, 185, 129, 0.08); }
+        .category-articles { display: none; padding-left: 8px; }
+        .category-group.expanded .category-articles { display: block; }
+        .category-group.expanded .chevron { transform: rotate(90deg); }
+        .chevron { transition: transform 0.2s; font-size: 10px; }
 
         .loader { border: 2px solid #e5e7eb; border-top: 2px solid #10b981; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -111,18 +126,8 @@
             </button>
         </div>
 
-        <!-- 分类筛选按钮 -->
-        <div class="px-5 pb-2 flex gap-2 overflow-x-auto no-scrollbar mb-2">
-            <button onclick="setFilter('全部')" id="filter-all" class="filter-btn active px-3 py-1 bg-emerald-600 text-white text-xs rounded-full shadow-sm flex-shrink-0 font-medium transition-colors border border-transparent">全部</button>
-            <button onclick="setFilter('财经热点')" id="filter-finance" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 text-xs rounded-full transition-colors flex-shrink-0">🔥 财经热点</button>
-            <button onclick="setFilter('金融知识')" id="filter-knowledge" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-yellow-200 hover:text-yellow-600 text-xs rounded-full transition-colors flex-shrink-0">💡 金融知识</button>
-            <button onclick="setFilter('小红书')" id="filter-redbook" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-pink-200 hover:text-pink-600 text-xs rounded-full transition-colors flex-shrink-0">小红书</button>
-            <button onclick="setFilter('技术笔记')" id="filter-tech" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-blue-200 hover:text-blue-600 text-xs rounded-full transition-colors flex-shrink-0">💻 技术笔记</button>
-            <button onclick="setFilter('工作')" id="filter-work" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">工作</button>
-            <button onclick="setFilter('生活')" id="filter-life" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">生活</button>
-        </div>
-
-        <div id="articleList" class="flex-1 overflow-y-auto no-scrollbar pl-1 pr-1">
+        <!-- 分类折叠列表 -->
+        <div id="categoryList" class="flex-1 overflow-y-auto no-scrollbar">
             <div class="flex flex-col items-center justify-center mt-20 space-y-2 opacity-50">
                 <div class="loader border-t-gray-400"></div>
                 <span class="text-xs text-gray-400">加载笔记...</span>
@@ -211,23 +216,26 @@
                     </button>
                     <!-- 下拉菜单：默认加 hidden -->
                     <div id="categoryMenu" class="dropdown-menu hidden absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 p-1.5 flex flex-col gap-0.5 z-50">
-                        <button onclick="selectCategory('财经热点', 'fa-fire')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-red-50 flex items-center justify-center text-red-500 group-hover:bg-red-200"><i class="fa-solid fa-fire text-[10px]"></i></div> 🔥 财经热点
+                        <button onclick="selectCategory('财经热点', 'fa-fire-flame-curved')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100"><i class="fa-solid fa-fire-flame-curved text-[10px]"></i></div> 财经热点
                         </button>
-                        <button onclick="selectCategory('金融知识', 'fa-lightbulb')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-500 group-hover:bg-yellow-200"><i class="fa-solid fa-lightbulb text-[10px]"></i></div> 💡 金融知识
+                        <button onclick="selectCategory('金融知识', 'fa-lightbulb')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100"><i class="fa-solid fa-lightbulb text-[10px]"></i></div> 金融知识
                         </button>
-                        <button onclick="selectCategory('小红书', 'fa-book')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-pink-50 hover:text-pink-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-pink-50 flex items-center justify-center text-pink-500 group-hover:bg-pink-200"><i class="fa-solid fa-book text-[10px]"></i></div> 小红书
+                        <button onclick="selectCategory('漫画学金融', 'fa-book-open')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100"><i class="fa-solid fa-book-open text-[10px]"></i></div> 漫画学金融
                         </button>
-                        <button onclick="selectCategory('技术笔记', 'fa-code')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-blue-200"><i class="fa-solid fa-code text-[10px]"></i></div> 💻 技术笔记
+                        <button onclick="selectCategory('视频学金融', 'fa-video')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100"><i class="fa-solid fa-video text-[10px]"></i></div> 视频学金融
                         </button>
                         <button onclick="selectCategory('工作', 'fa-briefcase')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-200"><i class="fa-solid fa-briefcase text-[10px]"></i></div> 工作笔记
+                            <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100"><i class="fa-solid fa-briefcase text-[10px]"></i></div> 工作
                         </button>
-                        <button onclick="selectCategory('生活', 'fa-leaf')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-green-50 hover:text-green-700 rounded-lg transition text-left group">
-                            <div class="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center text-green-600 group-hover:bg-green-200"><i class="fa-solid fa-leaf text-[10px]"></i></div> 生活文章
+                        <button onclick="selectCategory('生活', 'fa-leaf')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100"><i class="fa-solid fa-leaf text-[10px]"></i></div> 生活
+                        </button>
+                        <button onclick="selectCategory('AI', 'fa-robot')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100"><i class="fa-solid fa-robot text-[10px]"></i></div> AI
                         </button>
                     </div>
                     <input type="hidden" id="categoryInput" value="生活">
@@ -329,7 +337,6 @@ create policy "Allow anon access" on public.articles for all using (true) with c
         let articles = [];
         let currentArticleId = null;
         let saveTimeout = null;
-        let currentFilter = '全部';
 
         // Toast 通知
         function showToast(message, type = 'info', duration = 3000) {
@@ -495,29 +502,10 @@ create policy "Allow anon access" on public.articles for all using (true) with c
             });
         }
 
-        // --- 筛选逻辑 ---
-        function setFilter(category) {
-            currentFilter = category;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active', 'bg-emerald-600', 'text-white', 'border-transparent');
-                btn.classList.add('bg-white', 'border-gray-200', 'text-gray-500');
-            });
-            const btnIdMap = {
-                '全部': 'filter-all',
-                '财经热点': 'filter-finance',
-                '金融知识': 'filter-knowledge',
-                '小红书': 'filter-redbook',
-                '技术笔记': 'filter-tech',
-                '工作': 'filter-work',
-                '生活': 'filter-life'
-            };
-            const btnId = btnIdMap[category] || 'filter-all';
-            const activeBtn = document.getElementById(btnId);
-            if (activeBtn) {
-                activeBtn.classList.remove('bg-white', 'border-gray-200', 'text-gray-500');
-                activeBtn.classList.add('active', 'bg-emerald-600', 'text-white', 'border-transparent');
-            }
-            renderArticleList();
+        // --- 分类折叠逻辑 ---
+        function toggleCategory(header) {
+            const group = header.parentElement;
+            group.classList.toggle('expanded');
         }
 
         function togglePaperColorMenu(e) {
@@ -558,7 +546,7 @@ create policy "Allow anon access" on public.articles for all using (true) with c
             setSyncStatus('loading');
 
             try {
-                const { data, error } = await db.from('articles').select('*').eq('user_id', SHARED_SPACE_ID).order('updated_at', { ascending: false });
+                const { data, error } = await db.from('articles').select('*').order('updated_at', { ascending: false });
 
                 if (error) {
                     if (error.code === '42P01' || error.code === 'PGRST204' || error.code === 'PGRST205') {
@@ -572,13 +560,12 @@ create policy "Allow anon access" on public.articles for all using (true) with c
                 }
 
                 articles = data || [];
-                renderArticleList();
+                renderCategoryList();
                 setSyncStatus('synced');
 
                 if (window.innerWidth > 768) {
-                    const filtered = currentFilter === '全部' ? articles : articles.filter(a => a.category === currentFilter);
-                    if (!currentArticleId && filtered.length > 0) loadArticle(filtered[0].id);
-                    else if (filtered.length === 0) document.getElementById('emptyState').classList.remove('hidden');
+                    if (!currentArticleId && articles.length > 0) loadArticle(articles[0].id);
+                    else if (articles.length === 0) document.getElementById('emptyState').classList.remove('hidden');
                 }
             } catch (e) {
                 showConnectionError(`网络错误: ${e.message}`);
@@ -598,12 +585,11 @@ create policy "Allow anon access" on public.articles for all using (true) with c
             }
 
             setSyncStatus('syncing');
-            const defaultCat = currentFilter === '全部' ? '生活' : currentFilter;
             const newArticle = {
                 user_id: SHARED_SPACE_ID,
                 title: '',
                 content: '',
-                category: defaultCat,
+                category: '生活',
                 updated_at: new Date().toISOString()
             };
             const { data, error } = await db.from('articles').insert([newArticle]).select();
@@ -612,7 +598,7 @@ create policy "Allow anon access" on public.articles for all using (true) with c
                 return;
             }
             articles.unshift(data[0]);
-            renderArticleList();
+            renderCategoryList();
             loadArticle(data[0].id);
             setSyncStatus('synced');
             if(window.innerWidth < 768) closeSidebar();
@@ -639,38 +625,102 @@ create policy "Allow anon access" on public.articles for all using (true) with c
             }, 800);
         }
 
-        function renderArticleList() {
-            const listEl = document.getElementById('articleList');
+        function renderCategoryList() {
+            const listEl = document.getElementById('categoryList');
             if(!listEl) return;
             listEl.innerHTML = '';
-            const filteredArticles = currentFilter === '全部' ? articles : articles.filter(a => a.category === currentFilter);
-            if (filteredArticles.length === 0) {
-                listEl.innerHTML = '<div class="text-center text-gray-300 text-xs mt-10">暂无文章</div>';
-                return;
-            }
-            filteredArticles.forEach(article => {
-                const tempDiv = document.createElement('div'); tempDiv.innerHTML = article.content || '';
-                const preview = tempDiv.textContent.substring(0, 24) || '';
-                const time = new Date(article.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const item = document.createElement('div');
-                item.className = `article-item p-4 px-5 border-b border-gray-50 cursor-pointer relative group ${article.id === currentArticleId ? 'active' : ''}`;
 
-                // [核心修复] 点击自己不重载
-                item.onclick = async () => {
-                    if(currentArticleId === article.id) {
+            // 分类配置 - 统一 emerald 主题配色
+            const categories = [
+                { key: '财经热点', icon: 'fa-fire-flame-curved', label: '财经热点' },
+                { key: '金融知识', icon: 'fa-lightbulb', label: '金融知识' },
+                { key: '漫画学金融', icon: 'fa-book-open', label: '漫画学金融' },
+                { key: '视频学金融', icon: 'fa-video', label: '视频学金融' },
+                { key: '工作', icon: 'fa-briefcase', label: '工作' },
+                { key: '生活', icon: 'fa-leaf', label: '生活' },
+                { key: 'AI', icon: 'fa-robot', label: 'AI' }
+            ];
+
+            let hasAnyArticle = false;
+
+            categories.forEach((cat, index) => {
+                const catArticles = articles.filter(a => a.category === cat.key);
+                // 不再跳过空分类，始终显示所有分类
+
+                if (catArticles.length > 0) hasAnyArticle = true;
+
+                // 创建分类组
+                const group = document.createElement('div');
+                // 有文章且是第一个分类，或者包含当前文章时展开；空分类默认收起
+                const shouldExpand = catArticles.length > 0 && (index === 0 || catArticles.some(a => a.id === currentArticleId));
+                group.className = `category-group ${shouldExpand ? 'expanded' : ''}`;
+
+                // 分类头部
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.onclick = function() { toggleCategory(this); };
+                header.innerHTML = `
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-chevron-right chevron text-gray-400"></i>
+                        <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center">
+                            <i class="fa-solid ${cat.icon} text-[10px] text-emerald-600"></i>
+                        </div>
+                        <span class="text-sm font-medium text-gray-700">${cat.label}</span>
+                    </span>
+                    <span class="text-xs text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full font-medium">${catArticles.length}</span>
+                `;
+                group.appendChild(header);
+
+                // 文章列表
+                const articlesContainer = document.createElement('div');
+                articlesContainer.className = 'category-articles';
+
+                catArticles.forEach(article => {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = article.content || '';
+                    const preview = tempDiv.textContent.substring(0, 20) || '';
+                    const time = new Date(article.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                    const item = document.createElement('div');
+                    item.className = `article-item p-3 px-4 border-b border-gray-50 cursor-pointer ${article.id === currentArticleId ? 'active' : ''}`;
+
+                    item.onclick = async (e) => {
+                        e.stopPropagation();
+                        if(currentArticleId === article.id) {
+                            if(window.innerWidth < 768) closeSidebar();
+                            return;
+                        }
+                        if(currentArticleId) {
+                            await forceSave();
+                        }
+                        loadArticle(article.id);
                         if(window.innerWidth < 768) closeSidebar();
-                        return; // 如果点的是自己，啥也不干，防止覆盖新输入内容
-                    }
-                    if(currentArticleId) {
-                        await forceSave();
-                    }
-                    loadArticle(article.id);
-                    if(window.innerWidth < 768) closeSidebar();
-                };
+                    };
 
-                item.innerHTML = `<div class="flex items-center gap-2 mb-1.5"><span class="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded group-hover:bg-white transition-colors">${article.category}</span><h3 class="font-bold text-gray-700 truncate text-[13px] title-text flex-1">${article.title || '无标题文章'}</h3></div><div class="flex justify-between items-end"><p class="text-[11px] text-gray-400 truncate w-3/4 font-light tracking-wide">${preview}</p><span class="text-[10px] text-gray-300 font-mono">${time}</span></div>`;
-                listEl.appendChild(item);
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="font-medium text-gray-700 truncate text-[13px] title-text flex-1">${article.title || '无标题文章'}</h3>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <p class="text-[11px] text-gray-400 truncate w-3/4 font-light">${preview}</p>
+                            <span class="text-[10px] text-gray-300 font-mono">${time}</span>
+                        </div>
+                    `;
+                    articlesContainer.appendChild(item);
+                });
+
+                group.appendChild(articlesContainer);
+                listEl.appendChild(group);
             });
+
+            if (!hasAnyArticle) {
+                listEl.innerHTML = '<div class="text-center text-gray-300 text-xs mt-10">暂无文章</div>';
+            }
+        }
+
+        // 兼容旧调用
+        function renderArticleList() {
+            renderCategoryList();
         }
 
         function loadArticle(id) {
@@ -688,7 +738,7 @@ create policy "Allow anon access" on public.articles for all using (true) with c
             oldEditor.parentNode.replaceChild(newEditor, oldEditor);
 
             selectCategory(article.category, '', false);
-            renderArticleList();
+            renderCategoryList();
         }
 
         function updateLocalListPreview() {
@@ -714,9 +764,34 @@ create policy "Allow anon access" on public.articles for all using (true) with c
         }
 
         function selectCategory(cat, icon, save=true) {
-            const labelMap = {'财经热点':'🔥 财经热点', '金融知识':'💡 金融知识', '小红书':'小红书', '技术笔记':'💻 技术笔记', '工作':'工作笔记', '生活':'生活文章'};
-            const iconMap = {'财经热点':'fa-fire', '金融知识':'fa-lightbulb', '小红书':'fa-book', '技术笔记':'fa-code', '工作':'fa-briefcase', '生活':'fa-leaf'};
-            const colorMap = {'财经热点':'bg-red-100 text-red-500', '金融知识':'bg-yellow-100 text-yellow-500', '小红书':'bg-pink-100 text-pink-500', '技术笔记':'bg-blue-100 text-blue-500', '工作':'bg-emerald-100 text-emerald-500', '生活':'bg-green-100 text-green-600'};
+            const labelMap = {
+                '财经热点': '财经热点',
+                '金融知识': '金融知识',
+                '漫画学金融': '漫画学金融',
+                '视频学金融': '视频学金融',
+                '工作': '工作',
+                '生活': '生活',
+                'AI': 'AI'
+            };
+            const iconMap = {
+                '财经热点': 'fa-fire-flame-curved',
+                '金融知识': 'fa-lightbulb',
+                '漫画学金融': 'fa-book-open',
+                '视频学金融': 'fa-video',
+                '工作': 'fa-briefcase',
+                '生活': 'fa-leaf',
+                'AI': 'fa-robot'
+            };
+            // 统一使用 emerald 配色
+            const colorMap = {
+                '财经热点': 'bg-emerald-50 text-emerald-600',
+                '金融知识': 'bg-emerald-50 text-emerald-600',
+                '漫画学金融': 'bg-emerald-50 text-emerald-600',
+                '视频学金融': 'bg-emerald-50 text-emerald-600',
+                '工作': 'bg-emerald-50 text-emerald-600',
+                '生活': 'bg-emerald-50 text-emerald-600',
+                'AI': 'bg-emerald-50 text-emerald-600'
+            };
             document.getElementById('currentCategory').innerText = labelMap[cat] || cat;
             document.getElementById('categoryIcon').className = `fa-solid ${iconMap[cat]||'fa-leaf'} text-xs`;
             document.getElementById('categoryIconBg').className = `w-6 h-6 rounded-full flex items-center justify-center ${colorMap[cat]||'bg-emerald-100'}`;
@@ -749,9 +824,8 @@ create policy "Allow anon access" on public.articles for all using (true) with c
              setSyncStatus('syncing');
              await db.from('articles').delete().eq('id', currentArticleId);
              articles = articles.filter(a => a.id !== currentArticleId);
-             renderArticleList();
-             const filtered = currentFilter === '全部' ? articles : articles.filter(a => a.category === currentFilter);
-             if (filtered.length > 0) loadArticle(filtered[0].id);
+             renderCategoryList();
+             if (articles.length > 0) loadArticle(articles[0].id);
              else { currentArticleId = null; document.getElementById('titleInput').value = ''; document.getElementById('contentEditor').innerHTML = ''; document.getElementById('emptyState').classList.remove('hidden'); }
              setSyncStatus('synced');
         }
