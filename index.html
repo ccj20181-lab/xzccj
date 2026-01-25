@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZenWriter Cloud</title>
+    <meta name="theme-color" content="#faf9f5">
+
+    <!-- 网站图标 -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Fonts & Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body { font-family: 'Noto Sans SC', sans-serif; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease; }
+        .serif { font-family: 'Noto Serif SC', serif; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        [contenteditable]:empty:before { content: attr(placeholder); color: #d1d5db; font-style: italic; display: block; }
+
+        .article-item { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .article-item:hover { background-color: rgba(0,0,0,0.03); }
+        .article-item.active { background-color: rgba(16, 185, 129, 0.08); }
+        .article-item.active .title-text { color: #047857; }
+
+        /* 分类按钮激活状态 */
+        .filter-btn.active { background-color: #059669; color: white; border-color: #059669; }
+
+        .loader { border: 2px solid #e5e7eb; border-top: 2px solid #10b981; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- Editor Styles --- */
+        #contentEditor h1 { display: block; font-size: 1.75rem; font-weight: 800; margin-top: 1em; margin-bottom: 0.5em; line-height: 1.3; color: var(--heading-color, #111827); }
+        #contentEditor h2 { display: block; font-size: 1.5rem; font-weight: 700; margin-top: 0.8em; margin-bottom: 0.4em; line-height: 1.4; color: var(--heading-color, #1f2937); }
+        #contentEditor h3 { display: block; font-size: 1.25rem; font-weight: 600; margin-top: 0.8em; margin-bottom: 0.4em; line-height: 1.4; color: var(--heading-color, #374151); }
+        #contentEditor ul { display: block; list-style-type: disc; margin-left: 1.5em; margin-bottom: 1em; }
+        #contentEditor ol { display: block; list-style-type: decimal; margin-left: 1.5em; margin-bottom: 1em; }
+        #contentEditor li { display: list-item; padding-left: 0.2em; margin-bottom: 0.2em; }
+        #contentEditor blockquote { display: block; border-left: 4px solid #10b981; padding: 0.5em 1em; background-color: rgba(0,0,0,0.03); color: var(--quote-color, #6b7280); font-style: italic; margin: 1em 0; border-radius: 0 4px 4px 0; }
+        #contentEditor hr { border: 0; border-top: 2px solid #e5e7eb; margin: 2em 0; }
+
+        /* 解决下拉菜单默认显示问题 */
+        #categoryMenu.hidden { display: none !important; }
+
+        /* --- Dark Mode --- */
+        body.dark-mode { color: #e5e7eb; }
+        body.dark-mode #contentEditor { --heading-color: #f3f4f6; --quote-color: #9ca3af; }
+        body.dark-mode [contenteditable]:empty:before { color: #4b5563; }
+        body.dark-mode #titleInput { color: #f9fafb; }
+        body.dark-mode #titleInput::placeholder { color: #4b5563; }
+        body.dark-mode .article-text { color: #d1d5db; }
+        body.dark-mode .bg-white { background-color: #18181b !important; border-color: #27272a !important; }
+        body.dark-mode .text-gray-700 { color: #e5e7eb !important; }
+        body.dark-mode .text-gray-600 { color: #9ca3af !important; }
+        body.dark-mode .text-gray-500 { color: #71717a !important; }
+        body.dark-mode .hover\:bg-gray-50:hover { background-color: #27272a !important; }
+
+        /* 连接状态弹窗样式 */
+        .connection-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-success { background: #10b981; color: white; }
+        .toast-error { background: #ef4444; color: white; }
+        .toast-warning { background: #f59e0b; color: white; }
+        .toast-info { background: #3b82f6; color: white; }
+    </style>
+</head>
+<body id="appBody" class="bg-[#faf9f5] h-screen w-full flex overflow-hidden text-gray-700 selection:bg-emerald-100 selection:text-emerald-900 transition-colors duration-300">
+
+    <!-- 0. 移动端遮罩 -->
+    <div id="mobileBackdrop" onclick="closeSidebar()" class="fixed inset-0 bg-black/20 z-40 hidden md:hidden transition-opacity duration-300"></div>
+
+    <!-- 1. 左侧 APP 导航栏 -->
+    <aside id="sidebar" class="w-[280px] flex-shrink-0 flex flex-col border-r border-gray-100 bg-white h-full shadow-[2px_0_20px_rgba(0,0,0,0.01)] fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 md:relative md:translate-x-0 md:flex">
+        <div class="px-6 pt-8 pb-5 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-emerald-800 flex items-center gap-2 tracking-tight serif">
+                <i class="fa-solid fa-feather-pointed"></i> ZenWriter
+            </h1>
+            <button onclick="closeSidebar()" class="md:hidden text-gray-400 hover:text-gray-600 p-2"><i class="fa-solid fa-times"></i></button>
+        </div>
+
+        <div class="px-5 pb-5">
+            <button onclick="createNewArticleWithSave()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 font-medium text-sm group">
+                <i class="fa-solid fa-plus transition-transform group-hover:rotate-90"></i> 新建文章
+            </button>
+        </div>
+
+        <!-- 分类筛选按钮 -->
+        <div class="px-5 pb-2 flex gap-2 overflow-x-auto no-scrollbar mb-2">
+            <button onclick="setFilter('全部')" id="filter-all" class="filter-btn active px-3 py-1 bg-emerald-600 text-white text-xs rounded-full shadow-sm flex-shrink-0 font-medium transition-colors border border-transparent">全部</button>
+            <button onclick="setFilter('小红书')" id="filter-redbook" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">小红书</button>
+            <button onclick="setFilter('工作')" id="filter-work" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">工作</button>
+            <button onclick="setFilter('生活')" id="filter-life" class="filter-btn px-3 py-1 bg-white border border-gray-200 text-gray-500 hover:border-emerald-200 hover:text-emerald-600 text-xs rounded-full transition-colors flex-shrink-0">生活</button>
+        </div>
+
+        <div id="articleList" class="flex-1 overflow-y-auto no-scrollbar pl-1 pr-1">
+            <div class="flex flex-col items-center justify-center mt-20 space-y-2 opacity-50">
+                <div class="loader border-t-gray-400"></div>
+                <span class="text-xs text-gray-400">加载笔记...</span>
+            </div>
+        </div>
+
+        <div class="p-4 px-6 border-t border-gray-50 flex justify-between items-center text-xs text-gray-400 bg-white">
+            <div class="flex items-center gap-2 text-gray-400 font-medium"></div>
+            <div id="syncStatus" class="flex items-center gap-1.5 font-mono cursor-pointer" onclick="retryConnection()">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> 连接中...
+            </div>
+        </div>
+    </aside>
+
+    <!-- 2. 右侧主编辑区域 -->
+    <main class="flex-1 flex flex-col relative h-full min-w-0 transition-colors duration-300" id="mainArea">
+
+        <!-- 移动端顶部栏 -->
+        <div class="md:hidden h-14 bg-white/80 backdrop-blur border-b border-gray-100 flex items-center justify-between px-4 sticky top-0 z-30 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <button onclick="openSidebar()" class="text-gray-500 hover:text-emerald-600 p-1"><i class="fa-solid fa-bars text-lg"></i></button>
+                <span class="font-bold text-emerald-800 serif">Zen</span>
+            </div>
+            <button onclick="createNewArticle()" class="text-emerald-600 w-8 h-8 flex items-center justify-center bg-emerald-50 rounded-full shadow-sm"><i class="fa-solid fa-plus"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto relative w-full" id="editorContainer">
+            <div class="max-w-[850px] mx-auto px-6 md:px-12 py-8 md:py-16 relative group h-full">
+
+                <!-- 2. 编辑工具栏 (悬浮右上角) -->
+                <div class="absolute top-4 md:top-12 right-6 md:right-12 flex items-center gap-1 bg-white border border-gray-200 shadow-sm p-1.5 rounded-lg z-20 transition-colors duration-300 flex-wrap max-w-[90vw] justify-end" id="toolbar">
+                    <!-- 撤销/重做 -->
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('undo')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="撤销"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('redo')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="重做"><i class="fa-solid fa-rotate-right"></i></button>
+                    <div class="w-px h-3 bg-gray-200 mx-1"></div>
+
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('formatBlock', 'H2')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 font-bold text-xs" title="大标题">H1</button>
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('formatBlock', 'H3')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 font-bold text-[10px]" title="小标题">H2</button>
+
+                    <div class="w-px h-3 bg-gray-200 mx-1 hidden md:block"></div>
+
+                    <!-- 字体颜色 -->
+                    <div class="relative inline-block w-7 h-7">
+                        <button onmousedown="event.preventDefault()" onclick="document.getElementById('colorPicker').click()" class="w-full h-full flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="文字颜色">
+                            <i class="fa-solid fa-palette"></i>
+                        </button>
+                        <input type="color" id="colorPicker" onchange="formatDoc('foreColor', this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer overflow-hidden z-10">
+                    </div>
+
+                    <!-- 背景色切换 -->
+                    <div class="relative inline-block w-7 h-7">
+                        <button onclick="togglePaperColorMenu(event)" class="w-full h-full flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="纸张颜色">
+                            <i class="fa-solid fa-fill-drip"></i>
+                        </button>
+                        <div id="paperColorMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-200 shadow-xl rounded-lg p-2 flex-col gap-2 z-30 hidden min-w-[130px]">
+                            <button onclick="setTheme('beige')" class="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded text-xs text-gray-600 w-full text-left"><span class="w-4 h-4 rounded-full border border-gray-200 bg-[#faf9f5]"></span> 米黄 (默)</button>
+                            <button onclick="setTheme('green')" class="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded text-xs text-gray-600 w-full text-left"><span class="w-4 h-4 rounded-full border border-gray-200 bg-[#f4fdf4]"></span> 护眼绿</button>
+                            <button onclick="setTheme('white')" class="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded text-xs text-gray-600 w-full text-left"><span class="w-4 h-4 rounded-full border border-gray-200 bg-white"></span> 纯净白</button>
+                            <button onclick="setTheme('dark')" class="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded text-xs text-gray-600 w-full text-left"><span class="w-4 h-4 rounded-full border border-gray-600 bg-[#18181b]"></span> 暗夜黑</button>
+                        </div>
+                    </div>
+
+                    <div class="w-px h-3 bg-gray-200 mx-1"></div>
+
+                    <!-- 实用格式 -->
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('bold')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs"><i class="fa-solid fa-bold"></i></button>
+                    <!-- 两端对齐 -->
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('justifyFull')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="两端对齐"><i class="fa-solid fa-align-justify"></i></button>
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('justifyCenter')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="居中"><i class="fa-solid fa-align-center"></i></button>
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('formatBlock', 'blockquote')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="引用"><i class="fa-solid fa-quote-right"></i></button>
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('insertHorizontalRule')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs" title="分割线"><i class="fa-solid fa-minus"></i></button>
+                    <button onmousedown="event.preventDefault()" onclick="formatDoc('insertUnorderedList')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-emerald-700 text-xs"><i class="fa-solid fa-list-ul"></i></button>
+
+                    <div class="w-px h-3 bg-gray-200 mx-1"></div>
+                    <button onmousedown="event.preventDefault()" onclick="openDeleteModal()" class="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-500 text-xs ml-1 transition-colors"><i class="fa-regular fa-trash-can"></i></button>
+                </div>
+
+                <!-- 3. 分类选择器 - z-50 确保不被遮挡 -->
+                <div class="mt-8 mb-6 relative z-50 inline-block">
+                    <button id="categoryBtn" onclick="toggleCategoryDropdown(event)" class="flex items-center gap-2.5 text-gray-600 bg-gray-100/50 hover:bg-gray-100 transition pl-1.5 pr-3 py-1.5 rounded-full group border border-transparent hover:border-emerald-100">
+                        <div id="categoryIconBg" class="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                            <i id="categoryIcon" class="fa-solid fa-leaf text-xs"></i>
+                        </div>
+                        <span id="currentCategory" class="text-xs font-bold tracking-wide text-gray-600 group-hover:text-emerald-700 transition-colors">生活文章</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-0.5"></i>
+                    </button>
+                    <!-- 下拉菜单：默认加 hidden -->
+                    <div id="categoryMenu" class="dropdown-menu hidden absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 p-1.5 flex flex-col gap-0.5 z-50">
+                        <button onclick="selectCategory('生活', 'fa-leaf')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-200"><i class="fa-solid fa-leaf text-[10px]"></i></div> 生活文章
+                        </button>
+                        <button onclick="selectCategory('工作', 'fa-briefcase')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-blue-200"><i class="fa-solid fa-briefcase text-[10px]"></i></div> 工作笔记
+                        </button>
+                        <button onclick="selectCategory('小红书', 'fa-fire')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-red-50 flex items-center justify-center text-red-500 group-hover:bg-red-200"><i class="fa-solid fa-fire text-[10px]"></i></div> 小红书文案
+                        </button>
+                        <button onclick="selectCategory('灵感', 'fa-lightbulb')" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition text-left group">
+                            <div class="w-5 h-5 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-500 group-hover:bg-yellow-200"><i class="fa-solid fa-lightbulb text-[10px]"></i></div> 灵感记录
+                        </button>
+                    </div>
+                    <input type="hidden" id="categoryInput" value="生活">
+                </div>
+
+                <!-- 标题 -->
+                <input type="text" id="titleInput" placeholder="无标题文章"
+                    class="w-full text-[20px] font-bold text-gray-800 placeholder-gray-400 bg-transparent outline-none mb-8 serif tracking-tight leading-tight article-text block"
+                    style="display: block;"
+                    oninput="triggerSave()">
+
+                <!-- 正文 [增加 paste 监听] -->
+                <div id="contentEditor" contenteditable="true" placeholder="开始创作..."
+                    class="article-text serif text-base md:text-[17px] text-gray-700 leading-[1.8] outline-none min-h-[60vh] pb-32 cursor-text relative z-10"
+                    oninput="triggerSave()" onpaste="triggerSave()">
+                </div>
+            </div>
+        </div>
+
+        <button class="absolute bottom-6 right-6 md:bottom-10 md:right-10 w-12 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 flex items-center justify-center transition-transform hover:scale-105 z-30">
+            <i class="fa-regular fa-lightbulb text-lg"></i>
+        </button>
+
+        <div id="emptyState" class="absolute inset-0 bg-[#faf9f5] z-40 flex flex-col items-center justify-center text-gray-300 hidden">
+            <div class="bg-white p-8 rounded-full mb-6 shadow-sm border border-gray-50">
+                <i class="fa-solid fa-feather text-4xl text-emerald-100"></i>
+            </div>
+            <p class="text-gray-400 font-medium text-lg tracking-wide serif">开始你的创作之旅</p>
+            <p class="text-xs text-gray-300 mt-2 md:hidden">点击上方 + 新建</p>
+        </div>
+
+        <!-- Modals -->
+        <div id="setupGuide" class="absolute inset-0 bg-white/95 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden">
+             <div class="bg-white p-10 rounded-2xl shadow-2xl border border-gray-100 max-w-lg w-full text-center">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">初始化数据库</h3>
+                <p class="text-sm text-gray-500 mb-4">初次使用请在 Supabase 运行 SQL</p>
+                <div id="connectionError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-left">
+                    <p class="text-sm text-red-600 font-medium mb-1"><i class="fa-solid fa-exclamation-circle mr-1"></i> 连接诊断</p>
+                    <p id="errorDetail" class="text-xs text-red-500"></p>
+                </div>
+                <div class="relative group">
+                    <textarea id="sqlCode" class="w-full h-32 bg-slate-50 text-xs text-slate-600 p-4 rounded-lg mb-6 font-mono resize-none outline-none border border-slate-200" readonly>
+create table public.articles (
+  id uuid default gen_random_uuid() primary key,
+  user_id text not null,
+  title text default '无标题文章',
+  content text default '',
+  category text default '生活',
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+alter table public.articles enable row level security;
+create policy "Allow anon access" on public.articles for all using (true) with check (true);
+                    </textarea>
+                    <button onclick="copySQL()" class="absolute top-2 right-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-2 py-1 rounded text-[10px] shadow-sm transition">复制</button>
+                </div>
+                <button onclick="retryConnection()" class="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 transition font-medium shadow-lg shadow-emerald-100 mb-3">
+                    <i class="fa-solid fa-rotate-right mr-2"></i>重新连接
+                </button>
+                <button onclick="location.reload()" class="w-full bg-gray-100 text-gray-600 py-3 rounded-xl hover:bg-gray-200 transition font-medium">刷新页面</button>
+            </div>
+        </div>
+
+        <div id="deleteModal" class="absolute inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 w-[300px] md:w-[340px] transform scale-95 transition-transform duration-200" id="deleteModalContent">
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-trash-can text-lg"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800">删除文章?</h3>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="hideDeleteModal()" class="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm font-medium transition">取消</button>
+                    <button onclick="confirmDelete()" class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition shadow-lg shadow-red-100">确认删除</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ============================================
+        // 多 CDN 回退机制 + 增强连接逻辑
+        // ============================================
+
+        const SUPABASE_CDNS = [
+            'https://unpkg.com/@supabase/supabase-js@2',
+            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.0/umd/supabase.min.js'
+        ];
+
+        const SUPABASE_URL = 'https://kprxqrirsbbkrkfwrpyq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwcnhxcmlyc2Jia3JrZndycHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMDg0NTgsImV4cCI6MjA3OTg4NDQ1OH0.FluYoK10wbq_zXoVa-Nwr9L-Mtj4Cn9tChXbNrV8HiE';
+
+        let db = null;
+        let connectionAttempts = 0;
+        const MAX_RETRIES = 3;
+
+        const SHARED_SPACE_ID = 'public-shared-space-v1';
+        let articles = [];
+        let currentArticleId = null;
+        let saveTimeout = null;
+        let currentFilter = '全部';
+
+        // Toast 通知
+        function showToast(message, type = 'info', duration = 3000) {
+            const existing = document.querySelector('.connection-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `connection-toast toast-${type}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i> ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // 动态加载 Supabase SDK
+        async function loadSupabaseSDK(cdnIndex = 0) {
+            if (window.supabase) return true;
+            if (cdnIndex >= SUPABASE_CDNS.length) return false;
+
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = SUPABASE_CDNS[cdnIndex];
+                script.onload = () => {
+                    if (window.supabase) {
+                        console.log(`✓ Supabase SDK loaded from CDN ${cdnIndex + 1}`);
+                        resolve(true);
+                    } else {
+                        resolve(loadSupabaseSDK(cdnIndex + 1));
+                    }
+                };
+                script.onerror = () => {
+                    console.warn(`✗ CDN ${cdnIndex + 1} failed, trying next...`);
+                    resolve(loadSupabaseSDK(cdnIndex + 1));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // 初始化 Supabase 客户端（带重试）
+        async function initSupabase(retries = MAX_RETRIES) {
+            connectionAttempts++;
+            setSyncStatus('loading');
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    // 确保 SDK 已加载
+                    if (!window.supabase) {
+                        const loaded = await loadSupabaseSDK();
+                        if (!loaded) {
+                            throw new Error('SDK_LOAD_FAILED');
+                        }
+                    }
+
+                    // 创建客户端
+                    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+                    // 测试连接 - 尝试查询
+                    const { data, error } = await db.from('articles').select('id').limit(1);
+
+                    if (error) {
+                        if (error.code === '42P01' || error.code === 'PGRST204') {
+                            // 表不存在
+                            showConnectionError('数据库表不存在，请先运行初始化 SQL');
+                            document.getElementById('setupGuide').classList.remove('hidden');
+                            return false;
+                        }
+                        throw error;
+                    }
+
+                    console.log('✓ Supabase connected successfully');
+                    showToast('云端连接成功', 'success');
+                    return true;
+
+                } catch (e) {
+                    console.warn(`Supabase init attempt ${i + 1}/${retries} failed:`, e);
+
+                    if (i < retries - 1) {
+                        const delay = 1000 * (i + 1);
+                        setSyncStatus('loading');
+                        await new Promise(r => setTimeout(r, delay));
+                    }
+                }
+            }
+
+            // 所有重试失败
+            showConnectionError('无法连接到云端服务，请检查网络后重试');
+            setSyncStatus('error');
+            return false;
+        }
+
+        // 显示连接错误详情
+        function showConnectionError(message) {
+            const errorDiv = document.getElementById('connectionError');
+            const errorDetail = document.getElementById('errorDetail');
+            if (errorDiv && errorDetail) {
+                errorDetail.textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
+            showToast(message, 'error', 5000);
+        }
+
+        // 重试连接
+        async function retryConnection() {
+            showToast('正在重新连接...', 'info');
+            document.getElementById('connectionError')?.classList.add('hidden');
+            document.getElementById('setupGuide')?.classList.add('hidden');
+
+            const success = await initSupabase();
+            if (success) {
+                initApp();
+            }
+        }
+
+        // 主入口
+        window.onload = async function() {
+            const success = await initSupabase();
+            if (success) {
+                initApp();
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    const activeEl = document.activeElement;
+                    if (activeEl !== document.getElementById('titleInput') &&
+                        activeEl !== document.getElementById('contentEditor') &&
+                        activeEl.tagName !== 'INPUT') {
+                        if (currentArticleId && !document.getElementById('deleteModal').classList.contains('hidden') === false) {
+                            openDeleteModal();
+                        }
+                    }
+                }
+            });
+        };
+
+        function initApp() { fetchArticles(); }
+
+        // --- 核心修复：强制保存逻辑 ---
+        async function forceSave() {
+            if (!currentArticleId || !db) return;
+            clearTimeout(saveTimeout);
+
+            const title = document.getElementById('titleInput').value;
+            const content = document.getElementById('contentEditor').innerHTML;
+            const category = document.getElementById('categoryInput').value;
+            const idToSave = currentArticleId;
+
+            // 1. 内存同步
+            const index = articles.findIndex(a => a.id === idToSave);
+            if (index !== -1) {
+                articles[index].title = title;
+                articles[index].content = content;
+                articles[index].category = category;
+            }
+
+            // 2. 网络同步 (不await，后台执行)
+            db.from('articles').update({
+                title: title,
+                content: content,
+                category: category,
+                updated_at: new Date().toISOString()
+            }).eq('id', idToSave).then(res => {
+                if(res.error) console.error("Auto-save failed", res.error);
+            });
+        }
+
+        // --- 筛选逻辑 ---
+        function setFilter(category) {
+            currentFilter = category;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-emerald-600', 'text-white', 'border-transparent');
+                btn.classList.add('bg-white', 'border-gray-200', 'text-gray-500');
+            });
+            const btnId = category === '全部' ? 'filter-all' :
+                          category === '小红书' ? 'filter-redbook' :
+                          category === '工作' ? 'filter-work' : 'filter-life';
+            const activeBtn = document.getElementById(btnId);
+            activeBtn.classList.remove('bg-white', 'border-gray-200', 'text-gray-500');
+            activeBtn.classList.add('active', 'bg-emerald-600', 'text-white', 'border-transparent');
+            renderArticleList();
+        }
+
+        function togglePaperColorMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('paperColorMenu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+            }
+        }
+
+        function setTheme(theme) {
+            const body = document.getElementById('appBody');
+            const main = document.getElementById('mainArea');
+            const empty = document.getElementById('emptyState');
+            body.classList.remove('dark-mode');
+            const colors = {
+                'beige': '#faf9f5', 'green': '#f4fdf4', 'white': '#ffffff', 'dark': '#18181b'
+            };
+            const bgColor = colors[theme];
+            body.style.backgroundColor = bgColor;
+            main.style.backgroundColor = bgColor;
+            empty.style.backgroundColor = bgColor;
+            if (theme === 'dark') body.classList.add('dark-mode');
+            const menu = document.getElementById('paperColorMenu');
+            menu.classList.add('hidden');
+            menu.classList.remove('flex');
+        }
+
+        function openSidebar() { document.getElementById('sidebar').classList.remove('-translate-x-full'); document.getElementById('mobileBackdrop').classList.remove('hidden'); }
+        function closeSidebar() { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('mobileBackdrop').classList.add('hidden'); }
+
+        async function fetchArticles() {
+            if (!db) return;
+            setSyncStatus('loading');
+
+            try {
+                const { data, error } = await db.from('articles').select('*').eq('user_id', SHARED_SPACE_ID).order('updated_at', { ascending: false });
+
+                if (error) {
+                    if (error.code === '42P01' || error.code === 'PGRST204' || error.code === 'PGRST205') {
+                        showConnectionError('数据库表不存在，请先运行初始化 SQL');
+                        document.getElementById('setupGuide').classList.remove('hidden');
+                    } else {
+                        showConnectionError(`查询失败: ${error.message}`);
+                    }
+                    setSyncStatus('error');
+                    return;
+                }
+
+                articles = data || [];
+                renderArticleList();
+                setSyncStatus('synced');
+
+                if (window.innerWidth > 768) {
+                    const filtered = currentFilter === '全部' ? articles : articles.filter(a => a.category === currentFilter);
+                    if (!currentArticleId && filtered.length > 0) loadArticle(filtered[0].id);
+                    else if (filtered.length === 0) document.getElementById('emptyState').classList.remove('hidden');
+                }
+            } catch (e) {
+                showConnectionError(`网络错误: ${e.message}`);
+                setSyncStatus('error');
+            }
+        }
+
+        async function createNewArticleWithSave() {
+            if (currentArticleId) await forceSave();
+            createNewArticle();
+        }
+
+        async function createNewArticle() {
+            if (!db) {
+                showToast('未连接到云端，请先重新连接', 'warning');
+                return;
+            }
+
+            setSyncStatus('syncing');
+            const defaultCat = currentFilter === '全部' ? '生活' : currentFilter;
+            const newArticle = {
+                user_id: SHARED_SPACE_ID,
+                title: '',
+                content: '',
+                category: defaultCat,
+                updated_at: new Date().toISOString()
+            };
+            const { data, error } = await db.from('articles').insert([newArticle]).select();
+            if (error) {
+                showToast('创建失败: ' + error.message, 'error');
+                return;
+            }
+            articles.unshift(data[0]);
+            renderArticleList();
+            loadArticle(data[0].id);
+            setSyncStatus('synced');
+            if(window.innerWidth < 768) closeSidebar();
+            document.getElementById('titleInput').focus();
+        }
+
+        function triggerSave() {
+            if (!db) return;
+            setSyncStatus('syncing');
+            clearTimeout(saveTimeout);
+            updateLocalListPreview();
+            saveTimeout = setTimeout(async () => {
+                if (!currentArticleId) return;
+                const title = document.getElementById('titleInput').value;
+                const content = document.getElementById('contentEditor').innerHTML;
+                const category = document.getElementById('categoryInput').value;
+                const { error } = await db.from('articles').update({ title, content, category, updated_at: new Date().toISOString() }).eq('id', currentArticleId);
+                if (error) {
+                    console.error('Save failed:', error);
+                    setSyncStatus('error');
+                } else {
+                    setSyncStatus('synced');
+                }
+            }, 800);
+        }
+
+        function renderArticleList() {
+            const listEl = document.getElementById('articleList');
+            if(!listEl) return;
+            listEl.innerHTML = '';
+            const filteredArticles = currentFilter === '全部' ? articles : articles.filter(a => a.category === currentFilter);
+            if (filteredArticles.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-gray-300 text-xs mt-10">暂无文章</div>';
+                return;
+            }
+            filteredArticles.forEach(article => {
+                const tempDiv = document.createElement('div'); tempDiv.innerHTML = article.content || '';
+                const preview = tempDiv.textContent.substring(0, 24) || '';
+                const time = new Date(article.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const item = document.createElement('div');
+                item.className = `article-item p-4 px-5 border-b border-gray-50 cursor-pointer relative group ${article.id === currentArticleId ? 'active' : ''}`;
+
+                // [核心修复] 点击自己不重载
+                item.onclick = async () => {
+                    if(currentArticleId === article.id) {
+                        if(window.innerWidth < 768) closeSidebar();
+                        return; // 如果点的是自己，啥也不干，防止覆盖新输入内容
+                    }
+                    if(currentArticleId) {
+                        await forceSave();
+                    }
+                    loadArticle(article.id);
+                    if(window.innerWidth < 768) closeSidebar();
+                };
+
+                item.innerHTML = `<div class="flex items-center gap-2 mb-1.5"><span class="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded group-hover:bg-white transition-colors">${article.category}</span><h3 class="font-bold text-gray-700 truncate text-[13px] title-text flex-1">${article.title || '无标题文章'}</h3></div><div class="flex justify-between items-end"><p class="text-[11px] text-gray-400 truncate w-3/4 font-light tracking-wide">${preview}</p><span class="text-[10px] text-gray-300 font-mono">${time}</span></div>`;
+                listEl.appendChild(item);
+            });
+        }
+
+        function loadArticle(id) {
+            currentArticleId = id;
+            document.getElementById('emptyState').classList.add('hidden');
+            const article = articles.find(a => a.id === id);
+            if (!article) return;
+
+            document.getElementById('titleInput').value = article.title || '';
+
+            // 重置 Undo Stack
+            const oldEditor = document.getElementById('contentEditor');
+            const newEditor = oldEditor.cloneNode(true);
+            newEditor.innerHTML = article.content || '';
+            oldEditor.parentNode.replaceChild(newEditor, oldEditor);
+
+            selectCategory(article.category, '', false);
+            renderArticleList();
+        }
+
+        function updateLocalListPreview() {
+            const index = articles.findIndex(a => a.id === currentArticleId);
+            if (index !== -1) {
+                articles[index].title = document.getElementById('titleInput').value;
+                const tempDiv = document.createElement('div'); tempDiv.innerHTML = document.getElementById('contentEditor').innerHTML;
+                renderArticleList();
+            }
+        }
+
+        function formatDoc(cmd, value = null) {
+            document.execCommand(cmd, false, value);
+            document.getElementById('contentEditor').focus();
+            triggerSave();
+        }
+
+        function toggleCategoryDropdown(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('categoryMenu');
+            if(menu.classList.contains('hidden')) { menu.classList.remove('hidden'); menu.classList.add('open'); }
+            else { menu.classList.add('hidden'); menu.classList.remove('open'); }
+        }
+
+        function selectCategory(cat, icon, save=true) {
+            const labelMap = {'生活':'生活文章', '工作':'工作笔记', '小红书':'小红书文案', '灵感':'灵感记录'};
+            const iconMap = {'生活':'fa-leaf', '工作':'fa-briefcase', '小红书':'fa-fire', '灵感':'fa-lightbulb'};
+            const colorMap = {'生活':'bg-emerald-100 text-emerald-600', '工作':'bg-blue-100 text-blue-500', '小红书':'bg-red-100 text-red-500', '灵感':'bg-yellow-100 text-yellow-600'};
+            document.getElementById('currentCategory').innerText = labelMap[cat] || cat;
+            document.getElementById('categoryIcon').className = `fa-solid ${iconMap[cat]||'fa-leaf'} text-xs`;
+            document.getElementById('categoryIconBg').className = `w-6 h-6 rounded-full flex items-center justify-center ${colorMap[cat]||'bg-emerald-100'}`;
+            document.getElementById('categoryInput').value = cat;
+            document.getElementById('categoryMenu').classList.add('hidden');
+            document.getElementById('categoryMenu').classList.remove('open');
+            if(save) triggerSave();
+        }
+
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('categoryMenu');
+            const btn = document.getElementById('categoryBtn');
+            if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.classList.add('hidden');
+                menu.classList.remove('open');
+            }
+            const colorMenu = document.getElementById('paperColorMenu');
+            if (colorMenu && !colorMenu.contains(e.target) && !e.target.closest('button[onclick="togglePaperColorMenu(event)"]')) {
+                colorMenu.classList.add('hidden');
+                colorMenu.classList.remove('flex');
+            }
+        });
+
+        function openDeleteModal() { if(!currentArticleId) return; const m=document.getElementById('deleteModal'); const c=document.getElementById('deleteModalContent'); m.classList.remove('hidden'); setTimeout(()=>{m.classList.remove('opacity-0');c.classList.remove('scale-95');c.classList.add('scale-100')},10); }
+        function hideDeleteModal() { const m=document.getElementById('deleteModal'); const c=document.getElementById('deleteModalContent'); m.classList.add('opacity-0');c.classList.remove('scale-100');c.classList.add('scale-95'); setTimeout(()=>{m.classList.add('hidden')},200); }
+        async function confirmDelete() {
+             if (!db) return;
+             hideDeleteModal();
+             if (!currentArticleId) return;
+             setSyncStatus('syncing');
+             await db.from('articles').delete().eq('id', currentArticleId);
+             articles = articles.filter(a => a.id !== currentArticleId);
+             renderArticleList();
+             const filtered = currentFilter === '全部' ? articles : articles.filter(a => a.category === currentFilter);
+             if (filtered.length > 0) loadArticle(filtered[0].id);
+             else { currentArticleId = null; document.getElementById('titleInput').value = ''; document.getElementById('contentEditor').innerHTML = ''; document.getElementById('emptyState').classList.remove('hidden'); }
+             setSyncStatus('synced');
+        }
+
+        function setSyncStatus(status) {
+            const el = document.getElementById('syncStatus'); if(!el) return;
+            if (status === 'synced') el.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 已连接';
+            else if (status === 'syncing') el.innerHTML = '<div class="loader mr-1.5"></div> 保存...';
+            else if (status === 'error') el.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> <span class="text-red-500">连接失败</span>';
+            else if (status === 'loading') el.innerHTML = '<div class="loader mr-1.5"></div> 连接中...';
+        }
+        function copySQL() { const s=document.getElementById('sqlCode'); if(s){ s.select(); document.execCommand('copy'); showToast('SQL 已复制到剪贴板', 'success'); } }
+    </script>
+</body>
+</html>
