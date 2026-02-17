@@ -321,13 +321,14 @@ create policy "Allow anon access" on public.articles for all using (true) with c
         // ============================================
 
         const SUPABASE_CDNS = [
-            'https://unpkg.com/@supabase/supabase-js@2',
-            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.0/umd/supabase.min.js'
+            './supabase.js',
+            'https://unpkg.com/@supabase/supabase-js@2.95.3/dist/umd/supabase.js',
+            'https://unpkg.com/@supabase/supabase-js@2'
         ];
+        const SDK_LOAD_TIMEOUT_MS = 6000;
 
-        const SUPABASE_URL = 'https://kprxqrirsbbkrkfwrpyq.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwcnhxcmlyc2Jia3JrZndycHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMDg0NTgsImV4cCI6MjA3OTg4NDQ1OH0.FluYoK10wbq_zXoVa-Nwr9L-Mtj4Cn9tChXbNrV8HiE';
+        const SUPABASE_URL = 'https://sfmsbwpskrvtktoywrag.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_VAt3S7l8exB5u7pe-GHelg_e9pc7YQ9';
 
         let db = null;
         let connectionAttempts = 0;
@@ -351,34 +352,66 @@ create policy "Allow anon access" on public.articles for all using (true) with c
             setTimeout(() => toast.remove(), duration);
         }
 
+        function getErrorMessage(error) {
+            if (!error) return '未知错误';
+            if (typeof error === 'string') return error;
+            if (error.message) return error.message;
+            try {
+                return JSON.stringify(error);
+            } catch (_) {
+                return String(error);
+            }
+        }
+
         // 动态加载 Supabase SDK
         async function loadSupabaseSDK(cdnIndex = 0) {
             if (window.supabase) return true;
             if (cdnIndex >= SUPABASE_CDNS.length) return false;
 
             return new Promise((resolve) => {
+                const source = SUPABASE_CDNS[cdnIndex];
                 const script = document.createElement('script');
-                script.src = SUPABASE_CDNS[cdnIndex];
+                let settled = false;
+                script.src = source;
+                script.async = true;
+
+                const settle = (ok) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timeout);
+                    script.onload = null;
+                    script.onerror = null;
+                    resolve(ok);
+                };
+
                 script.onload = () => {
                     if (window.supabase) {
-                        console.log(`✓ Supabase SDK loaded from CDN ${cdnIndex + 1}`);
-                        resolve(true);
+                        console.log(`✓ Supabase SDK loaded: ${source}`);
+                        settle(true);
                     } else {
-                        resolve(loadSupabaseSDK(cdnIndex + 1));
+                        console.warn(`✗ SDK loaded but window.supabase missing: ${source}`);
+                        settle(false);
                     }
                 };
                 script.onerror = () => {
-                    console.warn(`✗ CDN ${cdnIndex + 1} failed, trying next...`);
-                    resolve(loadSupabaseSDK(cdnIndex + 1));
+                    console.warn(`✗ SDK source failed: ${source}`);
+                    settle(false);
                 };
+
+                const timeout = setTimeout(() => {
+                    console.warn(`✗ SDK source timeout: ${source}`);
+                    settle(false);
+                }, SDK_LOAD_TIMEOUT_MS);
+
                 document.head.appendChild(script);
-            });
+            }).then(ok => ok ? true : loadSupabaseSDK(cdnIndex + 1));
         }
 
         // 初始化 Supabase 客户端（带重试）
         async function initSupabase(retries = MAX_RETRIES) {
             connectionAttempts++;
             setSyncStatus('loading');
+            let lastError = null;
 
             for (let i = 0; i < retries; i++) {
                 try {
@@ -411,6 +444,7 @@ create policy "Allow anon access" on public.articles for all using (true) with c
                     return true;
 
                 } catch (e) {
+                    lastError = e;
                     console.warn(`Supabase init attempt ${i + 1}/${retries} failed:`, e);
 
                     if (i < retries - 1) {
@@ -422,7 +456,10 @@ create policy "Allow anon access" on public.articles for all using (true) with c
             }
 
             // 所有重试失败
-            showConnectionError('无法连接到云端服务，请检查网络后重试');
+            const detail = lastError?.message === 'SDK_LOAD_FAILED'
+                ? '无法加载 Supabase SDK（网络/CDN 不可达）'
+                : `连接失败：${getErrorMessage(lastError)}`;
+            showConnectionError(detail);
             setSyncStatus('error');
             return false;
         }
