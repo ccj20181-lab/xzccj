@@ -327,12 +327,25 @@ create policy "Allow anon access" on public.articles for all using (true) with c
         ];
         const SDK_LOAD_TIMEOUT_MS = 6000;
 
-        const SUPABASE_URL = 'https://sfmsbwpskrvtktoywrag.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_VAt3S7l8exB5u7pe-GHelg_e9pc7YQ9';
+        const SUPABASE_SOURCES = [
+            {
+                name: '当前数据源',
+                url: 'https://sfmsbwpskrvtktoywrag.supabase.co',
+                key: 'sb_publishable_VAt3S7l8exB5u7pe-GHelg_e9pc7YQ9',
+                priority: 2
+            },
+            {
+                name: '历史数据源',
+                url: 'https://kprxqrirsbbkrkfwrpyq.supabase.co',
+                key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwcnhxcmlyc2Jia3JrZndycHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMDg0NTgsImV4cCI6MjA3OTg4NDQ1OH0.FluYoK10wbq_zXoVa-Nwr9L-Mtj4Cn9tChXbNrV8HiE',
+                priority: 1
+            }
+        ];
 
         let db = null;
         let connectionAttempts = 0;
         const MAX_RETRIES = 3;
+        let activeSupabaseSourceName = '';
 
         const SHARED_SPACE_ID = 'public-shared-space-v1';
         let articles = [];
@@ -423,25 +436,62 @@ create policy "Allow anon access" on public.articles for all using (true) with c
                         }
                     }
 
-                    // 创建客户端
-                    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    // 连接可用数据源，优先选择有文章数据的源
+                    let bestSource = null;
+                    let tableMissingCount = 0;
 
-                    // 测试连接 - 尝试查询
-                    const { data, error } = await db.from('articles').select('id').limit(1);
+                    for (const source of SUPABASE_SOURCES) {
+                        try {
+                            const client = window.supabase.createClient(source.url, source.key);
+                            const { data, error, count } = await client
+                                .from('articles')
+                                .select('id', { count: 'exact' })
+                                .limit(1);
 
-                    if (error) {
-                        if (error.code === '42P01' || error.code === 'PGRST204') {
-                            // 表不存在
-                            showConnectionError('数据库表不存在，请先运行初始化 SQL');
-                            document.getElementById('setupGuide').classList.remove('hidden');
-                            return false;
+                            if (error) {
+                                if (error.code === '42P01' || error.code === 'PGRST204' || error.code === 'PGRST205') {
+                                    tableMissingCount++;
+                                    continue;
+                                }
+                                throw new Error(`${source.name}: ${getErrorMessage(error)}`);
+                            }
+
+                            const rowCount = typeof count === 'number'
+                                ? count
+                                : (Array.isArray(data) ? data.length : 0);
+
+                            if (
+                                !bestSource ||
+                                rowCount > bestSource.rowCount ||
+                                (rowCount === bestSource.rowCount && (source.priority || 0) > bestSource.priority)
+                            ) {
+                                bestSource = { client, name: source.name, rowCount, priority: source.priority || 0 };
+                            }
+                        } catch (sourceError) {
+                            lastError = sourceError;
+                            console.warn(`✗ ${source.name} connect failed:`, sourceError);
                         }
-                        throw error;
                     }
 
-                    console.log('✓ Supabase connected successfully');
-                    showToast('云端连接成功', 'success');
-                    return true;
+                    if (bestSource) {
+                        db = bestSource.client;
+                        activeSupabaseSourceName = bestSource.name;
+                        console.log(`✓ Supabase connected successfully (${activeSupabaseSourceName}, rows=${bestSource.rowCount})`);
+                        if (bestSource.rowCount > 0) {
+                            showToast(`云端连接成功（${activeSupabaseSourceName}）`, 'success');
+                        } else {
+                            showToast(`已连接云端（${activeSupabaseSourceName}暂无文章）`, 'warning', 4500);
+                        }
+                        return true;
+                    }
+
+                    if (tableMissingCount === SUPABASE_SOURCES.length) {
+                        showConnectionError('数据库表不存在，请先运行初始化 SQL');
+                        document.getElementById('setupGuide').classList.remove('hidden');
+                        return false;
+                    }
+
+                    throw lastError || new Error('NO_AVAILABLE_SOURCE');
 
                 } catch (e) {
                     lastError = e;
